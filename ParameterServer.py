@@ -23,15 +23,20 @@ config.read('ps.conf')
 HOST = config['DEFAULT']['HOST']
 PORT = config['DEFAULT'].getint('PORT')
 LEARNING_RATE = config['DEFAULT'].getfloat('LEARNING_RATE')
+UPDATE_THRESH = config['DEFAULT'].getint('UPDATE_THRESH')
 
 # 可能随时间变化
 learning_rate = LEARNING_RATE
 # 管理当前接入的workers，workers的内容应该包含id, status和clock
 workers = {}
 max_worker_id = 0
+# 当前服务器的参数版本
+server_iteration_count = 0
+# 出现了几个更新
+update_count = 0
 
 logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 logger.setLevel(logging.DEBUG)
 
 mutex = threading.Lock()
@@ -46,6 +51,7 @@ class ParameterServerHandler:
 
     def push(self, wid, key, value, time_stamp):
         logger.debug('push key=%s, value=%s, ts=%s', key, value, time_stamp)
+        global update_count, UPDATE_THRESH
         if key not in parameters:
             logger.info('error key: %s', key)
             return 'error key: %s' % key
@@ -55,7 +61,14 @@ class ParameterServerHandler:
         if wid not in workers or workers[wid]['status'] != 'working':
             logger.info('worker#%d is not working: %s', wid, workers[wid]['status'] if wid in workers else 'None')
             return 'worker#%d is not working: %s' % (wid, workers[wid]['status'] if wid in workers else 'None')
+        if time_stamp < server_iteration_count:
+            logger.info('worker#%d behind iteration: %d(%d)', wid, time_stamp, server_iteration_count)
+            return 'worker#%d behind iteration: %d(%d)' % (wid, time_stamp, server_iteration_count)
         gradients[key].append(value)
+        update_count += 1
+        if update_count >= UPDATE_THRESH:
+            update_parameters()
+            update_count = 0
         return 'success'
 
     def pull(self, wid, key, time_stamp):
@@ -66,7 +79,7 @@ class ParameterServerHandler:
         if wid not in workers or workers[wid]['status'] != 'working':
             logger.info('worker#%d is not working: %s', wid, workers[wid]['status'] if wid in workers else 'None')
             return 'worker#%d is not working: %s' % (wid, workers[wid]['status'] if wid in workers else 'None')
-        return json.dumps(parameters[key].tolist())
+        return json.dumps([server_iteration_count, parameters[key].tolist()])
 
     def init(self, wid, key_types_json):
         self.init_mutex.acquire()
@@ -110,6 +123,7 @@ def init_parameters(key_types):
 
 
 def update_parameters():
+    global server_iteration_count
     mutex.acquire()
     for k in parameters:
         tmp = np.zeros(parameters[k].shape)
@@ -118,6 +132,9 @@ def update_parameters():
         # 采用L2正则化项
         parameters[k] -= learning_rate * (tmp + parameters[k])
         gradients[k].clear()
+    server_iteration_count += 1
+    logger.info('parameters updated: %d', server_iteration_count)
+    mutex.release()
 
 
 def run():
@@ -137,15 +154,15 @@ def run():
     # 创建服务端
     server = TServer.TThreadPoolServer(processor, transport, tfactory, pfactory)
 
-    logger.info('ParameterServer listening %s:%s', HOST, PORT)
+    logger.info('ParameterServer listening %s:%s, LEARNING_RATE=%s, UPDATE_THRESH=%d',
+                HOST, PORT, LEARNING_RATE, UPDATE_THRESH)
     server.serve()
 
 
 if __name__ == '__main__':
-    # run()
-    # init_parameters([('fc1', (1, 2))])
+    run()
 
-    t = threading.Thread(target=run)
-    t.start()
-    IPython.embed()
-    t.join()
+    # t = threading.Thread(target=run)
+    # t.start()
+    # IPython.embed()
+    # t.join()

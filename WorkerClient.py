@@ -42,7 +42,7 @@ class WorkerClient:
     def init(self, key_types):
         ret = self.ps_client.init(self.wid, json.dumps(key_types))
         if ret == 'success':
-            self.key_types = {k:v for k, v in key_types}
+            self.key_types = {k: v for k, v in key_types}
         return ret
 
     def push(self, key, value):
@@ -51,7 +51,9 @@ class WorkerClient:
 
     def pull(self, key):
         ret = self.ps_client.pull(self.wid, key, self.clock)
-        return np.array(json.loads(ret)).reshape(self.key_types[key])
+        ret = json.loads(ret)
+        self.clock = ret[0]
+        return np.array(ret[1]).reshape(self.key_types[key])
 
 
 if __name__ == '__main__':
@@ -65,3 +67,10 @@ if __name__ == '__main__':
         print('init', wc.init([['fc1', [1, 2]], ['fc2', [2, 3]]]))
         print('pull', wc.pull('fc1'))
         print('push', wc.push('fc1', np.array([0.4, 0.5])))
+        print('pull', wc.pull('fc1'))
+        print('push', wc.push('fc1', np.array([0.3, 0.2])))
+        print('pull', wc.pull('fc1'))
+        print('push', wc.push('fc1', np.array([0.3, 0.2])))
+        print('pull', wc.pull('fc1'))
+        print('push', wc.push('fc1', np.array([0.3, 0.2])))
+        print('pull', wc.pull('fc1'))
