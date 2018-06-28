@@ -277,6 +277,51 @@ def sigmoid(x, name=None):
     ''' Computes sigmoid of `x` element-wise.
     '''
     return Sigmoid(x, name=name)
+# ------------------------------------------------------------------------------
+# Relu operation
+# ------------------------------------------------------------------------------
+
+class Relu(Operation):
+    ''' Relu operation.
+    '''
+    def __init__(self, x, name=None):
+        ''' Relu operation constructor.
+
+        :param x: The input node.
+        :type x: Object of `Operation`, `Variable` or `Placeholder`.
+
+        :param name: The operation name.
+        :type name: str.
+        '''
+        super(self.__class__, self).__init__(x, name=name)
+
+    def compute_output(self):
+        ''' Compute and return the value of Relu function.
+        '''
+        x, = self.input_nodes
+        self.output_value = np.maximum(x, 0)
+        return self.output_value
+
+    def compute_gradient(self, grad=None):
+        ''' Compute the gradient for Relu operation wrt input value.
+
+        :param grad: The gradient of other operation wrt the Relu output.
+        :type grad: ndarray.
+        '''
+        if grad is None:
+            grad = np.ones_like(self.output_value)
+
+        x = self.input_nodes[0].output_value
+
+        if x > 0:
+            return grad
+        else 
+            return 0
+
+def relu(x, name=None):
+    ''' Computes Relu of `x` element-wise.
+    '''
+    return Relu(x, name=name)
 
 # ------------------------------------------------------------------------------
 # Logarithm operation
@@ -444,6 +489,106 @@ def square(x, name=None):
     ''' Computes square of x element-wise.
     '''
     return Square(x, name=name)
+
+# ------------------------------------------------------------------------------
+# Softmax operation
+# ------------------------------------------------------------------------------
+
+class Softmax(Operation):
+    ''' Softmax operation.
+    '''
+    def __init__(self, x, name=None):
+        ''' Operation constructor.
+
+        :param x: The input node.
+        :type x: Object of `Operation`, `Variable` or `Placeholder`.
+
+        :param name: The name of the operation.
+        :type name: str.
+        '''
+        super(self.__class__, self).__init__(x, name=name)
+
+    def compute_output(self):
+        ''' Compute and return the value of Softmax function.
+        '''
+        x, = self.input_nodes
+        e_x = np.exp(x - np.max(x))
+        self.output_value = e_x / e_x.sum(axis=0)
+        return self.output_value
+
+    def compute_gradient(self, grad=None):
+        ''' Compute the gradient for Softmax operation wrt input value.
+
+        :param grad: The gradient of other operation wrt the Softmax output.
+        :type grad: ndarray.
+        '''
+        input_value = self.input_nodes[0].output_value
+
+        if grad is None:
+            grad = np.ones_like(self.output_value)
+
+        matrix = np.diag(input_value)
+        for i in range(len(matrix)):
+            for j in range(len(matrix)):
+                if i == j:
+                    matrix[i][j] = input_value[i] * (1 - input_value[i])
+                else:
+                    matrix[i][j] = (-input_value[i]) * input_value[j]
+
+        return grad*matrix
+
+def softmax(x, name=None):
+    ''' Computes Softmax of x element-wise.
+    '''
+    return Softmax(x, name=name)
+# ------------------------------------------------------------------------------
+# Softmax_cross_entropy operation
+# ------------------------------------------------------------------------------
+
+class Softmax_cross_entropy(Operation):
+    ''' Cross_entropy_loss operation.
+    '''
+    def __init__(self, x, y, name=None):
+        ''' Operation constructor.
+
+        :param x: The input node.
+        :type x: Object of `Operation`, `Variable` or `Placeholder`.
+
+        :param name: The name of the operation.
+        :type name: str.
+        '''
+        super(self.__class__, self).__init__(x, name=name)
+
+    def compute_output(self):
+        ''' Compute and return the value of Softmax_cross_entropy function.
+        '''
+
+        x, y = self.input_nodes
+        logits = softmax(x)
+        m = y.shape[0]
+        self.output_value = -reduce_sum(y * log(x)) / m
+        return self.output_value
+
+    def compute_gradient(self, grad=None):
+        ''' Compute the gradient for Softmax_cross_entropy operation wrt input value.
+
+        :param grad: The gradient of other operation wrt the Softmax_cross_entropy output.
+        :type grad: ndarray.
+        '''
+        x, y = [node.output_value for node in self.input_nodes]
+
+        if grad is None:
+            grad = np.ones_like(self.output_value)
+
+        logits = softmax(x)
+        delta = (logits - y) / y.shape[0]
+        return grad * delta
+        
+
+def softmax_cross_entropy(x, y, name=None):
+    ''' x is the output of last layer, y is the groundtruth
+    '''
+    return Softmax_cross_entropy(x, y, name=name)
 
 # ------------------------------------------------------------------------------
 # Constant node
@@ -653,5 +798,22 @@ def compute_gradients(target_op):
                     visited.add(input_node)
                     queue.put(input_node)
 
-    return grad_table
+    return grad_table    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
