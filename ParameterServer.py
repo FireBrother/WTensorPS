@@ -52,9 +52,9 @@ class ParameterServerHandler:
         if len(value) != parameters[key].size:
             logger.info('size unmatched: %s%s', key, parameters[key].shape)
             return 'size unmatched: %s%s' % (key, parameters[key].shape)
-        if wid not in workers or workers[wid].status != 'working':
-            logger.info('worker#%d is not working: %s', wid, workers[wid].status if wid in workers else 'None')
-            return 'worker#%d is not working: %s' % (wid, workers[wid].status if wid in workers else 'None')
+        if wid not in workers or workers[wid]['status'] != 'working':
+            logger.info('worker#%d is not working: %s', wid, workers[wid]['status'] if wid in workers else 'None')
+            return 'worker#%d is not working: %s' % (wid, workers[wid]['status'] if wid in workers else 'None')
         gradients[key].append(value)
         return 'success'
 
@@ -63,16 +63,16 @@ class ParameterServerHandler:
         if key not in parameters:
             logger.info('error key: %s', key)
             return 'error key: %s' % key
-        if wid not in workers or workers[wid].status != 'working':
-            logger.info('worker#%d is not working: %s', wid, workers[wid].status if wid in workers else 'None')
-            return 'worker#%d is not working: %s' % (wid, workers[wid].status if wid in workers else 'None')
+        if wid not in workers or workers[wid]['status'] != 'working':
+            logger.info('worker#%d is not working: %s', wid, workers[wid]['status'] if wid in workers else 'None')
+            return 'worker#%d is not working: %s' % (wid, workers[wid]['status'] if wid in workers else 'None')
         return json.dumps(parameters[key].tolist())
 
     def init(self, wid, key_types_json):
         self.init_mutex.acquire()
-        if wid not in workers or workers[wid].status != 'working':
-            logger.info('worker#%d is not working: %s', wid, workers[wid].status if wid in workers else 'None')
-            ret = 'worker#%d is not working: %s' % (wid, workers[wid].status if wid in workers else 'None')
+        if wid not in workers or workers[wid]['status'] != 'working':
+            logger.info('worker#%d is not working: %s', wid, workers[wid]['status'] if wid in workers else 'None')
+            ret = 'worker#%d is not working: %s' % (wid, workers[wid]['status'] if wid in workers else 'None')
         elif init_parameters(json.loads(key_types_json)):
             ret = 'success'
         else:
@@ -90,9 +90,9 @@ class ParameterServerHandler:
         return w['id']
 
     def goodbye(self, wid):
-        if wid not in workers or workers[wid].status != 'working':
-            logger.info('worker#%d is not working: %s', wid, workers[wid].status if wid in workers else 'None')
-            return 'worker#%d is not working: %s' % (wid, workers[wid].status if wid in workers else 'None')
+        if wid not in workers or workers[wid]['status'] != 'working':
+            logger.info('worker#%d is not working: %s', wid, workers[wid]['status'] if wid in workers else 'None')
+            return 'worker#%d is not working: %s' % (wid, workers[wid]['status'] if wid in workers else 'None')
         workers[wid]['status'] = 'finished'
         return 'success'
 
