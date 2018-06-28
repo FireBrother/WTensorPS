@@ -19,12 +19,12 @@ all_structs = []
 
 
 class Iface(object):
-    def push(self, wid, key, value, time_stamp):
+    def push(self, wid, key, value_json, time_stamp):
         """
         Parameters:
          - wid
          - key
-         - value
+         - value_json
          - time_stamp
         """
         pass
@@ -38,11 +38,12 @@ class Iface(object):
         """
         pass
 
-    def init(self, wid, key_types_json):
+    def init(self, wid, key, init_value_json):
         """
         Parameters:
          - wid
-         - key_types_json
+         - key
+         - init_value_json
         """
         pass
 
@@ -64,23 +65,23 @@ class Client(Iface):
             self._oprot = oprot
         self._seqid = 0
 
-    def push(self, wid, key, value, time_stamp):
+    def push(self, wid, key, value_json, time_stamp):
         """
         Parameters:
          - wid
          - key
-         - value
+         - value_json
          - time_stamp
         """
-        self.send_push(wid, key, value, time_stamp)
+        self.send_push(wid, key, value_json, time_stamp)
         return self.recv_push()
 
-    def send_push(self, wid, key, value, time_stamp):
+    def send_push(self, wid, key, value_json, time_stamp):
         self._oprot.writeMessageBegin('push', TMessageType.CALL, self._seqid)
         args = push_args()
         args.wid = wid
         args.key = key
-        args.value = value
+        args.value_json = value_json
         args.time_stamp = time_stamp
         args.write(self._oprot)
         self._oprot.writeMessageEnd()
@@ -136,20 +137,22 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "pull failed: unknown result")
 
-    def init(self, wid, key_types_json):
+    def init(self, wid, key, init_value_json):
         """
         Parameters:
          - wid
-         - key_types_json
+         - key
+         - init_value_json
         """
-        self.send_init(wid, key_types_json)
+        self.send_init(wid, key, init_value_json)
         return self.recv_init()
 
-    def send_init(self, wid, key_types_json):
+    def send_init(self, wid, key, init_value_json):
         self._oprot.writeMessageBegin('init', TMessageType.CALL, self._seqid)
         args = init_args()
         args.wid = wid
-        args.key_types_json = key_types_json
+        args.key = key
+        args.init_value_json = init_value_json
         args.write(self._oprot)
         self._oprot.writeMessageEnd()
         self._oprot.trans.flush()
@@ -258,7 +261,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = push_result()
         try:
-            result.success = self._handler.push(args.wid, args.key, args.value, args.time_stamp)
+            result.success = self._handler.push(args.wid, args.key, args.value_json, args.time_stamp)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -304,7 +307,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = init_result()
         try:
-            result.success = self._handler.init(args.wid, args.key_types_json)
+            result.success = self._handler.init(args.wid, args.key, args.init_value_json)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -375,15 +378,15 @@ class push_args(object):
     Attributes:
      - wid
      - key
-     - value
+     - value_json
      - time_stamp
     """
 
 
-    def __init__(self, wid=None, key=None, value=None, time_stamp=None,):
+    def __init__(self, wid=None, key=None, value_json=None, time_stamp=None,):
         self.wid = wid
         self.key = key
-        self.value = value
+        self.value_json = value_json
         self.time_stamp = time_stamp
 
     def read(self, iprot):
@@ -406,13 +409,8 @@ class push_args(object):
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
-                if ftype == TType.LIST:
-                    self.value = []
-                    (_etype3, _size0) = iprot.readListBegin()
-                    for _i4 in range(_size0):
-                        _elem5 = iprot.readDouble()
-                        self.value.append(_elem5)
-                    iprot.readListEnd()
+                if ftype == TType.STRING:
+                    self.value_json = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
             elif fid == 4:
@@ -438,12 +436,9 @@ class push_args(object):
             oprot.writeFieldBegin('key', TType.STRING, 2)
             oprot.writeString(self.key.encode('utf-8') if sys.version_info[0] == 2 else self.key)
             oprot.writeFieldEnd()
-        if self.value is not None:
-            oprot.writeFieldBegin('value', TType.LIST, 3)
-            oprot.writeListBegin(TType.DOUBLE, len(self.value))
-            for iter6 in self.value:
-                oprot.writeDouble(iter6)
-            oprot.writeListEnd()
+        if self.value_json is not None:
+            oprot.writeFieldBegin('value_json', TType.STRING, 3)
+            oprot.writeString(self.value_json.encode('utf-8') if sys.version_info[0] == 2 else self.value_json)
             oprot.writeFieldEnd()
         if self.time_stamp is not None:
             oprot.writeFieldBegin('time_stamp', TType.I16, 4)
@@ -470,7 +465,7 @@ push_args.thrift_spec = (
     None,  # 0
     (1, TType.I32, 'wid', None, None, ),  # 1
     (2, TType.STRING, 'key', 'UTF8', None, ),  # 2
-    (3, TType.LIST, 'value', (TType.DOUBLE, None, False), None, ),  # 3
+    (3, TType.STRING, 'value_json', 'UTF8', None, ),  # 3
     (4, TType.I16, 'time_stamp', None, None, ),  # 4
 )
 
@@ -684,13 +679,15 @@ class init_args(object):
     """
     Attributes:
      - wid
-     - key_types_json
+     - key
+     - init_value_json
     """
 
 
-    def __init__(self, wid=None, key_types_json=None,):
+    def __init__(self, wid=None, key=None, init_value_json=None,):
         self.wid = wid
-        self.key_types_json = key_types_json
+        self.key = key
+        self.init_value_json = init_value_json
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -708,7 +705,12 @@ class init_args(object):
                     iprot.skip(ftype)
             elif fid == 2:
                 if ftype == TType.STRING:
-                    self.key_types_json = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                    self.key = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.init_value_json = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
             else:
@@ -725,9 +727,13 @@ class init_args(object):
             oprot.writeFieldBegin('wid', TType.I32, 1)
             oprot.writeI32(self.wid)
             oprot.writeFieldEnd()
-        if self.key_types_json is not None:
-            oprot.writeFieldBegin('key_types_json', TType.STRING, 2)
-            oprot.writeString(self.key_types_json.encode('utf-8') if sys.version_info[0] == 2 else self.key_types_json)
+        if self.key is not None:
+            oprot.writeFieldBegin('key', TType.STRING, 2)
+            oprot.writeString(self.key.encode('utf-8') if sys.version_info[0] == 2 else self.key)
+            oprot.writeFieldEnd()
+        if self.init_value_json is not None:
+            oprot.writeFieldBegin('init_value_json', TType.STRING, 3)
+            oprot.writeString(self.init_value_json.encode('utf-8') if sys.version_info[0] == 2 else self.init_value_json)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -749,7 +755,8 @@ all_structs.append(init_args)
 init_args.thrift_spec = (
     None,  # 0
     (1, TType.I32, 'wid', None, None, ),  # 1
-    (2, TType.STRING, 'key_types_json', 'UTF8', None, ),  # 2
+    (2, TType.STRING, 'key', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'init_value_json', 'UTF8', None, ),  # 3
 )
 
 

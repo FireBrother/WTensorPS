@@ -49,14 +49,15 @@ class ParameterServerHandler:
         self.init_mutex = threading.Lock()
         self.register_worker_mutex = threading.Lock()
 
-    def push(self, wid, key, value, time_stamp):
-        logger.debug('push key=%s, value=%s, ts=%s', key, value, time_stamp)
+    def push(self, wid, key, value_json, time_stamp):
+        logger.debug('push key=%s, value=%s, ts=%s', key, value_json, time_stamp)
+        value = np.array(json.loads(value_json))
         global update_count, UPDATE_THRESH
         if key not in parameters:
             logger.info('error key: %s', key)
             return 'error key: %s' % key
-        if len(value) != parameters[key].size:
-            logger.info('size unmatched: %s%s', key, parameters[key].shape)
+        if value.shape != parameters[key].shape:
+            logger.info('size unmatched: %s%s, should be %s', key, value.shape, parameters[key].shape)
             return 'size unmatched: %s%s' % (key, parameters[key].shape)
         if wid not in workers or workers[wid]['status'] != 'working':
             logger.info('worker#%d is not working: %s', wid, workers[wid]['status'] if wid in workers else 'None')
@@ -72,7 +73,7 @@ class ParameterServerHandler:
         return 'success'
 
     def pull(self, wid, key, time_stamp):
-        logger.debug('push key=%s, ts=%s', key, time_stamp)
+        logger.debug('pull key=%s, ts=%s', key, time_stamp)
         if key not in parameters:
             logger.info('error key: %s', key)
             return 'error key: %s' % key
@@ -81,15 +82,15 @@ class ParameterServerHandler:
             return 'worker#%d is not working: %s' % (wid, workers[wid]['status'] if wid in workers else 'None')
         return json.dumps([server_iteration_count, parameters[key].tolist()])
 
-    def init(self, wid, key_types_json):
+    def init(self, wid, key, init_value_json):
         self.init_mutex.acquire()
         if wid not in workers or workers[wid]['status'] != 'working':
             logger.info('worker#%d is not working: %s', wid, workers[wid]['status'] if wid in workers else 'None')
             ret = 'worker#%d is not working: %s' % (wid, workers[wid]['status'] if wid in workers else 'None')
-        elif init_parameters(json.loads(key_types_json)):
+        elif init_parameters(key, json.loads(init_value_json)):
             ret = 'success'
         else:
-            ret = 'PS already initialized, abort'
+            ret = '%d already initialized, abort' % key
         self.init_mutex.release()
         return ret
 
@@ -110,15 +111,14 @@ class ParameterServerHandler:
         return 'success'
 
 
-def init_parameters(key_types):
-    if len(parameters) > 0:
-        logger.info('reject reinitializing')
+def init_parameters(key, init_value):
+    if key in parameters:
+        logger.info('reject reinitializing %s' % key)
         return False
     logger.info('initializing parameters')
-    for key_type in key_types:
-        logger.debug(key_type)
-        parameters[key_type[0]] = np.random.random(key_type[1])
-        gradients[key_type[0]] = []
+    logger.debug('%s=%s', key, init_value)
+    parameters[key] = np.array(init_value)
+    gradients[key] = []
     return True
 
 
@@ -127,6 +127,8 @@ def update_parameters():
     mutex.acquire()
     for k in parameters:
         tmp = np.zeros(parameters[k].shape)
+        if len(gradients[k]) == 0:
+            continue
         for grad in gradients[k]:
             tmp += grad
         # 采用L2正则化项

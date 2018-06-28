@@ -17,7 +17,6 @@ class WorkerClient:
         self.wid = None
         self.clock = 0
         self.logger = logging.getLogger(__name__)
-        self.key_types = {}
 
     # 用于手动打开传输的入口函数
     def open(self):
@@ -39,21 +38,19 @@ class WorkerClient:
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
-    def init(self, key_types):
-        ret = self.ps_client.init(self.wid, json.dumps(key_types))
-        if ret == 'success':
-            self.key_types = {k: v for k, v in key_types}
+    def init(self, key, init_value):
+        ret = self.ps_client.init(self.wid, key, json.dumps(init_value.tolist()))
         return ret
 
     def push(self, key, value):
-        ret = self.ps_client.push(self.wid, key, value, self.clock)
+        ret = self.ps_client.push(self.wid, key, json.dumps(value.tolist()), self.clock)
         return ret
 
     def pull(self, key):
         ret = self.ps_client.pull(self.wid, key, self.clock)
         ret = json.loads(ret)
         self.clock = ret[0]
-        return np.array(ret[1]).reshape(self.key_types[key])
+        return np.array(ret[1])
 
 
 if __name__ == '__main__':
@@ -64,13 +61,17 @@ if __name__ == '__main__':
 
     # 使用with语句的例子（不再需要手动open和close）
     with WorkerClient('localhost', 9090) as wc:
-        print('init', wc.init([['fc1', [1, 2]], ['fc2', [2, 3]]]))
+        print('init', wc.init('fc1', np.array([[1.0, 2.0]])))
+        print('init', wc.init('fc2', np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])))
         print('pull', wc.pull('fc1'))
-        print('push', wc.push('fc1', np.array([0.4, 0.5])))
+        print('push', wc.push('fc1', np.array([[0.4, 0.5]])))
         print('pull', wc.pull('fc1'))
-        print('push', wc.push('fc1', np.array([0.3, 0.2])))
+        print('push', wc.push('fc2', np.array([[0.3, 0.2, 0.5], [1.3, 1.2, 1.5]])))
         print('pull', wc.pull('fc1'))
-        print('push', wc.push('fc1', np.array([0.3, 0.2])))
+        print('pull', wc.pull('fc2'))
+        print('push', wc.push('fc1', np.array([[0.3, 0.2]])))
         print('pull', wc.pull('fc1'))
-        print('push', wc.push('fc1', np.array([0.3, 0.2])))
+        print('push', wc.push('fc1', np.array([[0.3, 0.2]])))
+        print('push', wc.push('fc1', np.array([[0.3, 0.2]])))
+        print('push', wc.push('fc1', np.array([[0.3, 0.2]])))
         print('pull', wc.pull('fc1'))
