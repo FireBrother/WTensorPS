@@ -27,6 +27,7 @@ learning_rate = LEARNING_RATE
 
 logger = logging.getLogger(__name__)
 # logging.basicConfig(level=logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 
 mutex = threading.Lock()
 parameters = {}
@@ -45,20 +46,30 @@ class ParameterServerHandler:
         gradients[key].append(value)
         return 'success'
 
-    def pull(self, key, value, time_stamp):
-        logger.debug('push key=%s, value=%s, ts=%s', key, value, time_stamp)
-        return 1
+    def pull(self, key, time_stamp):
+        logger.debug('push key=%s, ts=%s', key, time_stamp)
+        if key not in parameters:
+            logger.info('error key: %s', key)
+            return 'error key: %s' % key
+        return json.dumps(parameters[key].tolist())
 
     def init(self, key_types_json):
-        init_parameters(json.loads(key_types_json))
+        if init_parameters(json.loads(key_types_json)):
+            return 'success'
+        else:
+            return 'PS already initialized, abort'
 
 
 def init_parameters(key_types):
+    if len(parameters) > 0:
+        logger.info('reject reinitializing')
+        return False
     logger.info('initializing parameters')
     for key_type in key_types:
         logger.debug(key_type)
         parameters[key_type[0]] = np.random.random(key_type[1])
         gradients[key_type[0]] = []
+    return True
 
 
 def update_parameters():

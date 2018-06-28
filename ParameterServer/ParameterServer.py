@@ -28,11 +28,10 @@ class Iface(object):
         """
         pass
 
-    def pull(self, key, value, time_stamp):
+    def pull(self, key, time_stamp):
         """
         Parameters:
          - key
-         - value
          - time_stamp
         """
         pass
@@ -87,21 +86,19 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "push failed: unknown result")
 
-    def pull(self, key, value, time_stamp):
+    def pull(self, key, time_stamp):
         """
         Parameters:
          - key
-         - value
          - time_stamp
         """
-        self.send_pull(key, value, time_stamp)
+        self.send_pull(key, time_stamp)
         return self.recv_pull()
 
-    def send_pull(self, key, value, time_stamp):
+    def send_pull(self, key, time_stamp):
         self._oprot.writeMessageBegin('pull', TMessageType.CALL, self._seqid)
         args = pull_args()
         args.key = key
-        args.value = value
         args.time_stamp = time_stamp
         args.write(self._oprot)
         self._oprot.writeMessageEnd()
@@ -206,7 +203,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = pull_result()
         try:
-            result.success = self._handler.pull(args.key, args.value, args.time_stamp)
+            result.success = self._handler.pull(args.key, args.time_stamp)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -406,14 +403,12 @@ class pull_args(object):
     """
     Attributes:
      - key
-     - value
      - time_stamp
     """
 
 
-    def __init__(self, key=None, value=None, time_stamp=None,):
+    def __init__(self, key=None, time_stamp=None,):
         self.key = key
-        self.value = value
         self.time_stamp = time_stamp
 
     def read(self, iprot):
@@ -431,16 +426,6 @@ class pull_args(object):
                 else:
                     iprot.skip(ftype)
             elif fid == 2:
-                if ftype == TType.LIST:
-                    self.value = []
-                    (_etype10, _size7) = iprot.readListBegin()
-                    for _i11 in range(_size7):
-                        _elem12 = iprot.readDouble()
-                        self.value.append(_elem12)
-                    iprot.readListEnd()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 3:
                 if ftype == TType.I16:
                     self.time_stamp = iprot.readI16()
                 else:
@@ -459,15 +444,8 @@ class pull_args(object):
             oprot.writeFieldBegin('key', TType.STRING, 1)
             oprot.writeString(self.key.encode('utf-8') if sys.version_info[0] == 2 else self.key)
             oprot.writeFieldEnd()
-        if self.value is not None:
-            oprot.writeFieldBegin('value', TType.LIST, 2)
-            oprot.writeListBegin(TType.DOUBLE, len(self.value))
-            for iter13 in self.value:
-                oprot.writeDouble(iter13)
-            oprot.writeListEnd()
-            oprot.writeFieldEnd()
         if self.time_stamp is not None:
-            oprot.writeFieldBegin('time_stamp', TType.I16, 3)
+            oprot.writeFieldBegin('time_stamp', TType.I16, 2)
             oprot.writeI16(self.time_stamp)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -490,8 +468,7 @@ all_structs.append(pull_args)
 pull_args.thrift_spec = (
     None,  # 0
     (1, TType.STRING, 'key', 'UTF8', None, ),  # 1
-    (2, TType.LIST, 'value', (TType.DOUBLE, None, False), None, ),  # 2
-    (3, TType.I16, 'time_stamp', None, None, ),  # 3
+    (2, TType.I16, 'time_stamp', None, None, ),  # 2
 )
 
 
