@@ -575,7 +575,6 @@ class Softmax_cross_entropy(Operation):
         :param grad: The gradient of other operation wrt the Softmax_cross_entropy output.
         :type grad: ndarray.
         '''
-        # IPython.embed()
         x, y = [node.output_value for node in self.input_nodes]
         sftmx = self._softmax(x)
 
@@ -583,7 +582,7 @@ class Softmax_cross_entropy(Operation):
             grad = np.ones_like(self.output_value)
 
         delta = sftmx - y
-        return grad * delta
+        return [grad * delta, np.zeros_like(y.shape)]
 
 
 def softmax_cross_entropy(x, y, name=None):
@@ -782,10 +781,10 @@ def compute_gradients(target_op):
 
                 # Compute the gradient wrt current node's output.
                 grad_wrt_node_output = output_node.compute_gradient(grad_wrt_output_node_output)
-                if isinstance(grad_wrt_node_output, np.ndarray):
-                    print(output_node, grad_wrt_node_output.shape)
-                else:
-                    print(output_node, [x.shape for x in grad_wrt_node_output])
+                # if isinstance(grad_wrt_node_output, np.ndarray):
+                #     print(output_node, grad_wrt_node_output.shape)
+                # else:
+                #     print(output_node, [x.shape for x in grad_wrt_node_output])
                 if len(output_node.input_nodes) > 1:
                     input_node_index = output_node.input_nodes.index(node)
                     grads_wrt_node_output.append(grad_wrt_node_output[input_node_index])

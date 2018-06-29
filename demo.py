@@ -22,7 +22,7 @@ y_ = sf.Placeholder()
 w = sf.Variable(np.array([[1.0, 1.0]]), name='weight')
 
 # Threshold
-b = sf.Variable(np.array([0.0]), name='threshold')
+b = sf.Variable(np.array([[0.0]]), name='threshold')
 
 # Predicted class by model
 y = sf.matmul(w, x) + b

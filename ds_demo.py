@@ -4,8 +4,8 @@ import IPython
 import numpy as np
 import simpleflow as sf
 
-feature = np.loadtxt('feature_mini.txt').T  # (19717, 500)
-label = np.loadtxt('label_mini.txt').T  # (19717, 3)
+feature = np.loadtxt('feature.txt').T  # (19717, 500)
+label = np.loadtxt('label.txt').T  # (19717, 3)
 
 batch = 200
 
