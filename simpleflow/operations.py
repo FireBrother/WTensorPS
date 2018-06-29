@@ -4,6 +4,7 @@
 '''
 from queue import Queue
 
+import IPython
 import numpy as np
 
 class Operation(object):
@@ -524,7 +525,7 @@ class Softmax(Operation):
         if grad is None:
             grad = np.ones_like(self.output_value)
         matrix = []
-        for i in range(input_value.shape[0]):
+        for i in range(input_value.shape[1]):
             s = self.output_value[i, :]
             matrix.append(s)
         matrix = np.stack(matrix)
@@ -543,8 +544,8 @@ class Softmax_cross_entropy(Operation):
     ''' Cross_entropy_loss operation.
     '''
     def _softmax(self, x):
-        e_x = np.exp(x - np.max(x, axis=1)[:, np.newaxis])
-        sftmx = e_x / e_x.sum(axis=1)[:, np.newaxis]
+        e_x = np.exp(x - np.max(x, axis=0))
+        sftmx = e_x / e_x.sum(axis=0)
         return sftmx
 
     def __init__(self, x, y, name=None):
@@ -565,8 +566,7 @@ class Softmax_cross_entropy(Operation):
         x, y = [node.output_value for node in self.input_nodes]
         sftmx = self._softmax(x)
 
-        m = y.shape[0]
-        self.output_value = -np.sum((y * sftmx)) / m
+        self.output_value = -y * sftmx
         return self.output_value
 
     def compute_gradient(self, grad=None):
@@ -575,13 +575,14 @@ class Softmax_cross_entropy(Operation):
         :param grad: The gradient of other operation wrt the Softmax_cross_entropy output.
         :type grad: ndarray.
         '''
+        # IPython.embed()
         x, y = [node.output_value for node in self.input_nodes]
-        # sftmx = self._softmax(x)
+        sftmx = self._softmax(x)
 
         if grad is None:
             grad = np.ones_like(self.output_value)
 
-        delta = (x - y) / y.shape[0]
+        delta = sftmx - y
         return grad * delta
 
 
@@ -781,6 +782,10 @@ def compute_gradients(target_op):
 
                 # Compute the gradient wrt current node's output.
                 grad_wrt_node_output = output_node.compute_gradient(grad_wrt_output_node_output)
+                if isinstance(grad_wrt_node_output, np.ndarray):
+                    print(output_node, grad_wrt_node_output.shape)
+                else:
+                    print(output_node, [x.shape for x in grad_wrt_node_output])
                 if len(output_node.input_nodes) > 1:
                     input_node_index = output_node.input_nodes.index(node)
                     grads_wrt_node_output.append(grad_wrt_node_output[input_node_index])
