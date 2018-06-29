@@ -35,7 +35,7 @@ with sf.Session() as sess:
     # IPython.embed(), quit()
     for step in range(10):
         loss_value = sess.run(loss, feed_dict=feed_dict)
-        loss_value = np.mean(np.sum(loss_value, axis=0))
+        loss_value = np.mean(loss_value)
         y_ = sess.run(h_fc2, feed_dict=feed_dict)
         max_possibility = np.argmax(y_, axis=0)
         correct_pred = np.equal(max_possibility, np.argmax(label, axis=0))

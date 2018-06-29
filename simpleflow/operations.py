@@ -543,9 +543,9 @@ def softmax(x, name=None):
 class Softmax_cross_entropy(Operation):
     ''' Cross_entropy_loss operation.
     '''
-    def _softmax(self, x):
-        e_x = np.exp(x - np.max(x, axis=0))
-        sftmx = e_x / e_x.sum(axis=0)
+    def _softmax(self, x, epsilon=0.0000001):
+        e_x = np.exp(x - np.max(x, axis=0)) + epsilon
+        sftmx = e_x / (e_x.sum(axis=0))
         return sftmx
 
     def __init__(self, x, y, name=None):
@@ -566,7 +566,7 @@ class Softmax_cross_entropy(Operation):
         x, y = [node.output_value for node in self.input_nodes]
         sftmx = self._softmax(x)
 
-        self.output_value = -y * sftmx
+        self.output_value = np.sum(-y * np.log(sftmx), axis=0)
         return self.output_value
 
     def compute_gradient(self, grad=None):
@@ -581,7 +581,7 @@ class Softmax_cross_entropy(Operation):
         if grad is None:
             grad = np.ones_like(self.output_value)
 
-        delta = sftmx - y
+        delta = sftmx * y - y
         return [grad * delta, np.zeros_like(y.shape)]
 
 
