@@ -4,12 +4,12 @@ import IPython
 import numpy as np
 import sys
 
-import simpleflow as sf
+import simpleflowps as sf
 
 feature = np.loadtxt(sys.argv[1])  # (19717, 500)
 label = np.loadtxt(sys.argv[2])  # (19717, 3)
 
-# DEFAULT_PS.open()
+DEFAULT_PS.open()
 
 X_input = sf.placeholder()
 y = sf.placeholder()
@@ -56,4 +56,4 @@ with sf.Session() as sess:
         # input()
     # Create a session to run the graph
 
-# DEFAULT_PS.close()
+DEFAULT_PS.close()
