@@ -563,12 +563,11 @@ class Softmax_cross_entropy(Operation):
         ''' Compute and return the value of Softmax_cross_entropy function.
         '''
         x, y = [node.output_value for node in self.input_nodes]        
-        m = y.shape[0]
 
         e_x = np.exp(x - np.max(x))
         logits = e_x / e_x.sum(axis=0)
 
-        self.output_value = -np.sum((y * logits)) / m
+        self.output_value = -np.sum((y * logits)) / y.shape[0]
         return self.output_value
 
     def compute_gradient(self, grad=None):
@@ -582,8 +581,10 @@ class Softmax_cross_entropy(Operation):
         if grad is None:
             grad = np.ones_like(self.output_value)
 
-        logits = softmax(x)
+        e_x = np.exp(x - np.max(x))
+        logits = e_x / e_x.sum(axis=0)
         delta = (logits - y) / y.shape[0]
+
         return grad * delta
         
 
