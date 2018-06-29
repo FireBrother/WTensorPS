@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 import IPython
 import numpy as np
-import simpleflowps as sf
+import sys
 
-feature = np.loadtxt('feature.txt')  # (19717, 500)
-label = np.loadtxt('label.txt')  # (19717, 3)
+import simpleflow as sf
 
-DEFAULT_PS.open()
+feature = np.loadtxt(sys.argv[1])  # (19717, 500)
+label = np.loadtxt(sys.argv[2])  # (19717, 3)
+
+# DEFAULT_PS.open()
 
 X_input = sf.placeholder()
 y = sf.placeholder()
@@ -34,6 +36,10 @@ feed_dict = {X_input: feature, y: label}
 with sf.Session() as sess:
     # IPython.embed(), quit()
     for step in range(1000):
+        index = np.arange(feature.shape[0])
+        np.random.shuffle(index)
+        feature = feature[index]
+        label = label[index]
         loss_value, y_, _ = sess.multi_run([loss, h_fc2, train], feed_dict=feed_dict)
         # loss_value = sess.run(loss, feed_dict=feed_dict)
         # y_ = sess.run(h_fc2, feed_dict=feed_dict)
@@ -50,4 +56,4 @@ with sf.Session() as sess:
         # input()
     # Create a session to run the graph
 
-DEFAULT_PS.close()
+# DEFAULT_PS.close()
