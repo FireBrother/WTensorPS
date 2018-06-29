@@ -312,11 +312,8 @@ class Relu(Operation):
             grad = np.ones_like(self.output_value)
 
         x = self.input_nodes[0].output_value
-
-        if x > 0:
-            return grad
-        else:
-            return 0
+        x[x < 0] = 0
+        return grad*x
 
 def relu(x, name=None):
     ''' Computes Relu of `x` element-wise.
@@ -512,8 +509,8 @@ class Softmax(Operation):
         ''' Compute and return the value of Softmax function.
         '''
         x, = self.input_nodes
-        e_x = np.exp(x.output_value - np.max(x.output_value))
-        self.output_value = e_x / e_x.sum(axis=0)
+        e_x = np.exp(x.output_value - np.max(x.output_value, axis=1)[:, np.newaxis])
+        self.output_value = e_x / e_x.sum(axis=1)[:, np.newaxis]
         return self.output_value
 
     def compute_gradient(self, grad=None):
@@ -526,14 +523,11 @@ class Softmax(Operation):
 
         if grad is None:
             grad = np.ones_like(self.output_value)
-
-        matrix = np.diag(input_value)
-        for i in range(len(matrix)):
-            for j in range(len(matrix)):
-                if i == j:
-                    matrix[i][j] = input_value[i] * (1 - input_value[i])
-                else:
-                    matrix[i][j] = (-input_value[i]) * input_value[j]
+        matrix = []
+        for i in range(input_value.shape[0]):
+            s = self.output_value[i, :]
+            matrix.append(s)
+        matrix = np.stack(matrix)
 
         return grad*matrix
 
@@ -564,9 +558,8 @@ class Softmax_cross_entropy(Operation):
         '''
 
         x, y = [node.output_value for node in self.input_nodes]
-        logits = softmax(x)
         m = y.shape[0]
-        self.output_value = -np.sum((y * logits.output_value)) / m
+        self.output_value = -np.sum((y * x)) / m
         return self.output_value
 
     def compute_gradient(self, grad=None):
@@ -580,10 +573,9 @@ class Softmax_cross_entropy(Operation):
         if grad is None:
             grad = np.ones_like(self.output_value)
 
-        logits = softmax(x)
-        delta = (logits - y) / y.shape[0]
+        delta = (x - y) / y.shape[0]
         return grad * delta
-        
+
 
 def softmax_cross_entropy(x, y, name=None):
     ''' x is the output of last layer, y is the groundtruth
@@ -646,7 +638,7 @@ def constant(value, name=None):
 class Variable(object):
     ''' Variable node in computational graph.
     '''
-    def __init__(self, initial_value=None, name=None, trainable=True): 
+    def __init__(self, initial_value=None, name=None, trainable=True):
         ''' Variable constructor.
 
         :param initial_value: The initial value of the variable.
@@ -798,9 +790,9 @@ def compute_gradients(target_op):
                     visited.add(input_node)
                     queue.put(input_node)
 
-    return grad_table    
+    return grad_table
 
-    
+
 
 
 
