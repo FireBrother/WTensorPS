@@ -524,9 +524,12 @@ class Variable(object):
 
         # Graph the variable belongs to.
         self.graph = DEFAULT_GRAPH
+        self.ps = DEFAULT_PS
 
         # Add to the currently active default graph.
         self.graph.variables.append(self)
+        if self.ps.init(name, initial_value) != 'success':
+            self.output_value = self.ps.pull(name)
         if trainable:
             self.graph.trainable_variables.append(self)
 

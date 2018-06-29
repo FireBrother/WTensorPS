@@ -90,7 +90,7 @@ class ParameterServerHandler:
         elif init_parameters(key, json.loads(init_value_json)):
             ret = 'success'
         else:
-            ret = '%d already initialized, abort' % key
+            ret = '%s already initialized, abort' % key
         self.init_mutex.release()
         return ret
 
@@ -132,7 +132,7 @@ def update_parameters():
         for grad in gradients[k]:
             tmp += grad
         # 采用L2正则化项
-        parameters[k] -= learning_rate * (tmp + parameters[k])
+        parameters[k] -= learning_rate * tmp
         gradients[k].clear()
     server_iteration_count += 1
     logger.info('parameters updated: %d', server_iteration_count)
@@ -162,9 +162,9 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
+    # run()
 
-    # t = threading.Thread(target=run)
-    # t.start()
-    # IPython.embed()
-    # t.join()
+    t = threading.Thread(target=run)
+    t.start()
+    IPython.embed()
+    t.join()

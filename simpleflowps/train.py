@@ -28,13 +28,19 @@ class GradientDescentOptimizer(object):
             def compute_output(self):
                 # Get gradient table.
                 grad_table = compute_gradients(loss)
+                should_update = False
 
                 # Iterate all trainable variables in graph.
                 for var in DEFAULT_GRAPH.trainable_variables:
                     if var in grad_table:
                         grad = grad_table[var]
+                        ret = DEFAULT_PS.push(var.name, grad)
+                        if 'behind' in ret:
+                            should_update = True
+                            break
 
-                    # Update its output value.
-                    var.output_value -= learning_rate*grad
+                if should_update:
+                    for var in DEFAULT_GRAPH.trainable_variables:
+                        var.output_value = DEFAULT_PS.pull(var.name)
 
         return MinimizationOperation()
