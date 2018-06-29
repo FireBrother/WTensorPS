@@ -33,8 +33,7 @@ class GradientDescentOptimizer(object):
                 for var in DEFAULT_GRAPH.trainable_variables:
                     if var in grad_table:
                         grad = grad_table[var]
-
-                    # Update its output value.
-                    var.output_value -= learning_rate*grad
+                        # Update its output value.
+                        var.output_value -= learning_rate*grad
 
         return MinimizationOperation()
