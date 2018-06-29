@@ -54,6 +54,33 @@ class Session(object):
 
         return operation.output_value
 
+    def multi_run(self, operations, feed_dict=None):
+        ''' Compute the output of an operation.
+
+        :param operation: A specific operation to be computed.
+        :type operation: object of `Operation`, `Variable` or `Placeholder`.
+
+        :param feed_dict: A mapping between placeholder and its actual value for the session.
+        :type feed_dict: dict.
+        '''
+        # Get all prerequisite nodes using postorder traversal.
+        postorder_nodes = []
+        for operation in operations:
+            postorder_nodes.extend(_get_prerequisite(operation))
+
+        computed_nodes = set()
+
+        for node in postorder_nodes:
+            if type(node) is Placeholder:
+                node.output_value = feed_dict[node]
+            elif node in computed_nodes:
+                continue
+            else:  # Operation and variable
+                node.compute_output()
+                computed_nodes.add(node)
+
+        return [operation.output_value for operation in operations]
+
 def _get_prerequisite(operation):
     ''' Perform a post-order traversal to get a list of nodes to be computed in order.
     '''

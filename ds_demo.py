@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 import IPython
 import numpy as np
-import simpleflow as sf
+import simpleflowps as sf
 
 feature = np.loadtxt('feature.txt')  # (19717, 500)
 label = np.loadtxt('label.txt')  # (19717, 3)
 
-batch = 200
+DEFAULT_PS.open()
 
 X_input = sf.placeholder()
 y = sf.placeholder()
@@ -27,7 +27,7 @@ h_fc2 = sf.matmul(h_fc1, w2) + b2
 
 loss = sf.softmax_cross_entropy(h_fc2, y)
 
-train = sf.GradientDescentOptimizer(learning_rate=0.01).minimize(loss)
+train = sf.GradientDescentOptimizer(learning_rate=0.005).minimize(loss)
 
 feed_dict = {X_input: feature, y: label}
 
@@ -45,6 +45,9 @@ with sf.Session() as sess:
         # if step % 100 == 0:
         print('step: {}, loss: {}, acc: {}'.format(step, loss_value, accuracy))
 
-        # w1_value = sess.run(w1, feed_dict)
-        # w2_value = sess.run(w2, feed_dict)
+        # params = sess.multi_run([w1, b1], feed_dict)
+        # print(params)
+        # input()
     # Create a session to run the graph
+
+DEFAULT_PS.close()
