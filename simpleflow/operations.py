@@ -511,8 +511,8 @@ class Softmax(Operation):
     def compute_output(self):
         ''' Compute and return the value of Softmax function.
         '''
-        x, = self.input_nodes
-        e_x = np.exp(x.output_value - np.max(x.output_value))
+        x = self.input_nodes[0].output_value
+        e_x = np.exp(x - np.max(x))
         self.output_value = e_x / e_x.sum(axis=0)
         return self.output_value
 
@@ -562,11 +562,13 @@ class Softmax_cross_entropy(Operation):
     def compute_output(self):
         ''' Compute and return the value of Softmax_cross_entropy function.
         '''
-
-        x, y = [node.output_value for node in self.input_nodes]
-        logits = softmax(x)
+        x, y = [node.output_value for node in self.input_nodes]        
         m = y.shape[0]
-        self.output_value = -np.sum((y * logits.output_value)) / m
+
+        e_x = np.exp(x - np.max(x))
+        logits = e_x / e_x.sum(axis=0)
+
+        self.output_value = -np.sum((y * logits)) / m
         return self.output_value
 
     def compute_gradient(self, grad=None):
@@ -586,7 +588,7 @@ class Softmax_cross_entropy(Operation):
         
 
 def softmax_cross_entropy(x, y, name=None):
-    ''' x is the output of last layer, y is the groundtruth
+    ''' y is label
     '''
     return Softmax_cross_entropy(x, y, name=name)
 
