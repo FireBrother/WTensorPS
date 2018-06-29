@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 ''' Optimizer classes for parameters optimization.
 '''
-from WorkerClient import WorkerClient
+# from WorkerClient import WorkerClient
 from .operations import Operation, compute_gradients
 
 class GradientDescentOptimizer(object):

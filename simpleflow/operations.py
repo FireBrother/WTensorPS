@@ -299,7 +299,7 @@ class Relu(Operation):
         ''' Compute and return the value of Relu function.
         '''
         x, = self.input_nodes
-        self.output_value = np.maximum(x, 0)
+        self.output_value = np.maximum(x.output_value, 0)
         return self.output_value
 
     def compute_gradient(self, grad=None):
@@ -315,7 +315,7 @@ class Relu(Operation):
 
         if x > 0:
             return grad
-        else 
+        else:
             return 0
 
 def relu(x, name=None):
@@ -512,7 +512,7 @@ class Softmax(Operation):
         ''' Compute and return the value of Softmax function.
         '''
         x, = self.input_nodes
-        e_x = np.exp(x - np.max(x))
+        e_x = np.exp(x.output_value - np.max(x.output_value))
         self.output_value = e_x / e_x.sum(axis=0)
         return self.output_value
 
@@ -557,16 +557,16 @@ class Softmax_cross_entropy(Operation):
         :param name: The name of the operation.
         :type name: str.
         '''
-        super(self.__class__, self).__init__(x, name=name)
+        super(self.__class__, self).__init__(x, y, name=name)
 
     def compute_output(self):
         ''' Compute and return the value of Softmax_cross_entropy function.
         '''
 
-        x, y = self.input_nodes
+        x, y = [node.output_value for node in self.input_nodes]
         logits = softmax(x)
         m = y.shape[0]
-        self.output_value = -reduce_sum(y * log(x)) / m
+        self.output_value = -np.sum((y * logits.output_value)) / m
         return self.output_value
 
     def compute_gradient(self, grad=None):
